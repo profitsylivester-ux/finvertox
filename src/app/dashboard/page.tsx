@@ -6,8 +6,12 @@ import Link from "next/link";
 import { 
   LayoutDashboard, Briefcase, Book, Landmark, FileText, CheckSquare, Trash, Target,
   Wallet, ShoppingCart, CreditCard, Receipt, Folder, ShieldAlert, Users, History,
-  Bell, ChevronDown, Lock, Building2, Sun, Moon, TrendingDown, Activity
+  Bell, ChevronDown, Lock, Building2, Sun, Moon, TrendingDown, Activity, X
 } from "lucide-react";
+import { 
+  AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer 
+} from 'recharts';
 
 interface UserData {
   firstName: string;
@@ -31,6 +35,7 @@ interface Log {
   userName: string;
   action: string;
   details: string;
+  isRead: boolean;
   createdAt: string;
 }
 
@@ -42,6 +47,8 @@ const CURRENCIES = [
   { code: "KES", symbol: "KSh" },
 ];
 
+const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+
 export default function DashboardPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -49,18 +56,39 @@ export default function DashboardPage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
+  const [chartData, setChartData] = useState<any>({ revExpData: [], pieData: [] });
+  const [chartType, setChartType] = useState<"line" | "bar" | "pie" | "donut">("line");
   const [isLoading, setIsLoading] = useState(true);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isChartMenuOpen, setIsChartMenuOpen] = useState(false);
+
+  // State for Adding Account
+  const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState("Expense");
+  const [accountError, setAccountError] = useState("");
+
+  const fetchLogs = () => {
+    fetch("/api/notifications")
+      .then(res => res.json())
+      .then(data => setLogs(data.logs || []));
+  };
+
+  const fetchAccounts = () => {
+    fetch("/api/accounts")
+      .then(res => res.json())
+      .then(data => setAccounts(data.accounts || []));
+  };
 
   useEffect(() => {
     setMounted(true);
     const fetchData = async () => {
       try {
-        const [userRes, accountsRes, logsRes] = await Promise.all([
+        const [userRes, chartsRes] = await Promise.all([
           fetch("/api/auth/me"),
-          fetch("/api/accounts"),
-          fetch("/api/notifications")
+          fetch("/api/dashboard/charts")
         ]);
 
         if (!userRes.ok) {
@@ -69,12 +97,13 @@ export default function DashboardPage() {
         }
 
         const userData = await userRes.json();
-        const accountsData = await accountsRes.json();
-        const logsData = await logsRes.json();
+        const chartsData = await chartsRes.json();
         
         setUser(userData);
-        setAccounts(accountsData.accounts || []);
-        setLogs(logsData.logs || []);
+        setChartData(chartsData);
+        
+        fetchAccounts();
+        fetchLogs();
       } catch (err) {
         router.push("/login");
       } finally {
@@ -100,6 +129,33 @@ export default function DashboardPage() {
     });
   };
 
+  const handleMarkAllRead = async () => {
+    await fetch("/api/notifications/read", { method: "POST" });
+    fetchLogs();
+    setIsNotificationsOpen(false);
+  };
+
+  const handleAddAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAccountError("");
+
+    const res = await fetch("/api/accounts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: newCode, name: newName, type: newType }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setAccountError(data.error);
+      return;
+    }
+
+    setNewCode(""); setNewName(""); setNewType("Expense");
+    setIsAddingAccount(false);
+    fetchAccounts();
+  };
+
   if (isLoading || !mounted) {
     return <div className="min-h-screen flex items-center justify-center bg-[#0a1128] text-white">Loading secure workspace...</div>;
   }
@@ -114,6 +170,8 @@ export default function DashboardPage() {
 
   const totalAssets = accounts.filter(a => a.type === 'Asset').reduce((sum, a) => sum + parseFloat(a.balance), 0);
   const totalLiabilities = accounts.filter(a => a.type === 'Liability').reduce((sum, a) => sum + parseFloat(a.balance), 0);
+  const unreadCount = logs.filter(l => !l.isRead).length;
+  const totalExpenses = chartData.pieData.reduce((sum: number, item: any) => sum + item.value, 0);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-800 dark:text-slate-200 transition-colors duration-300">
@@ -155,6 +213,9 @@ export default function DashboardPage() {
             <Link href="/dashboard/reports" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <FileText className="w-4 h-4" /> Financial Reports
             </Link>
+            <Link href="/dashboard/budgets" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+              <Target className="w-4 h-4" /> Budgets & Commitments
+            </Link>
             <Link href="/dashboard/settings/periods" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Lock className="w-4 h-4" /> Period Close
             </Link>
@@ -187,19 +248,16 @@ export default function DashboardPage() {
 
           <div>
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Treasury</p>
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+            <Link href="/dashboard/treasury" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Landmark className="w-4 h-4" /> Cash, Bank & Mobile
-            </button>
+            </Link>
           </div>
 
           <div className="pb-4">
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Administration</p>
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <Users className="w-4 h-4" /> Users & Roles
-            </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+            <Link href="/dashboard/audit-trail" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <History className="w-4 h-4" /> Audit Trail
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -223,8 +281,6 @@ export default function DashboardPage() {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-        
-        {/* TOP NAVBAR */}
         <header className="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 bg-white dark:bg-slate-900 transition-colors duration-300">
           <div className="flex items-center">
             {isCEO && (
@@ -255,7 +311,6 @@ export default function DashboardPage() {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* THEME TOGGLE */}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -263,15 +318,14 @@ export default function DashboardPage() {
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            {/* NOTIFICATIONS DROPDOWN */}
             <div className="relative">
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                 className="relative p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
               >
                 <Bell className="w-5 h-5" />
-                {logs.length > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
                 )}
               </button>
 
@@ -279,7 +333,11 @@ export default function DashboardPage() {
                 <div className="absolute top-12 right-0 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
                   <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">Live Activity</h3>
-                    <span className="text-xs text-blue-600 font-semibold cursor-pointer">Mark all as read</span>
+                    {unreadCount > 0 && (
+                      <button onClick={handleMarkAllRead} className="text-xs text-blue-600 font-semibold hover:underline">
+                        Mark all as read
+                      </button>
+                    )}
                   </div>
                   
                   <div className="max-h-80 overflow-y-auto">
@@ -287,8 +345,11 @@ export default function DashboardPage() {
                       <div className="p-6 text-center text-sm text-slate-500">No activity yet.</div>
                     ) : (
                       logs.map((log) => (
-                        <div key={log.id} className="p-4 border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
-                          <p className="text-sm text-slate-800 dark:text-slate-200 font-bold">{log.userName}</p>
+                        <div key={log.id} className={`p-4 border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer ${!log.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                          <p className="text-sm text-slate-800 dark:text-slate-200 font-bold flex items-center gap-2">
+                            {log.userName}
+                            {!log.isRead && <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>}
+                          </p>
                           <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">{log.details}</p>
                           <p className="text-[10px] font-medium text-slate-400 mt-1 uppercase tracking-wider">
                             {new Date(log.createdAt).toLocaleDateString()} at {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -299,13 +360,14 @@ export default function DashboardPage() {
                   </div>
                   
                   <div className="p-3 text-center border-t border-slate-100 dark:border-slate-700">
-                    <button className="text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white">View Full Audit Trail</button>
+                    <Link href="/dashboard/audit-trail" onClick={() => setIsNotificationsOpen(false)} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                      View Full Audit Trail
+                    </Link>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* USER PROFILE */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold text-slate-900 dark:text-white">{displayName}</p>
@@ -318,7 +380,6 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* DASHBOARD CONTENT */}
         <div className="flex-1 overflow-y-auto p-8">
           <div className="max-w-[1400px] mx-auto space-y-6">
             
@@ -327,7 +388,6 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Welcome back, {displayName}. Here is your financial overview.</p>
             </div>
 
-            {/* KPI CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-2">
@@ -366,33 +426,110 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* MIDDLE SECTION: CHART & TABLE */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* CHART */}
-              <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+              <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col relative min-h-[380px]">
                 <div className="flex justify-between items-center mb-6">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800 dark:text-white">Cash Flow Overview</h3>
-                    <p className="text-xs text-slate-500">Last 7 days</p>
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white">Financial Analytics</h3>
+                    <p className="text-xs text-slate-500">Live data from your ledger</p>
                   </div>
-                  <button className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">View Report</button>
+                  
+                  <div className="relative">
+                    <button onClick={() => setIsChartMenuOpen(!isChartMenuOpen)} className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors">
+                      {chartType === 'line' && 'Line Chart'}
+                      {chartType === 'bar' && 'Bar Chart'}
+                      {chartType === 'pie' && 'Pie Chart'}
+                      {chartType === 'donut' && 'Donut Chart'}
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                    {isChartMenuOpen && (
+                      <div className="absolute top-10 right-0 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-20 py-1">
+                        <button onClick={() => { setChartType('line'); setIsChartMenuOpen(false); }} className="w-full text-left px-4 py-2 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Revenue vs Exp (Line)</button>
+                        <button onClick={() => { setChartType('bar'); setIsChartMenuOpen(false); }} className="w-full text-left px-4 py-2 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Revenue vs Exp (Bar)</button>
+                        <button onClick={() => { setChartType('pie'); setIsChartMenuOpen(false); }} className="w-full text-left px-4 py-2 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Expenses (Pie)</button>
+                        <button onClick={() => { setChartType('donut'); setIsChartMenuOpen(false); }} className="w-full text-left px-4 py-2 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Expenses (Donut)</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 flex items-end gap-3 pb-4 h-48">
-                  <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-t-sm h-[40%] hover:bg-blue-200 transition-colors"></div>
-                  <div className="w-full bg-blue-200 dark:bg-blue-800/50 rounded-t-sm h-[60%] hover:bg-blue-300 transition-colors"></div>
-                  <div className="w-full bg-blue-300 dark:bg-blue-700/50 rounded-t-sm h-[45%] hover:bg-blue-400 transition-colors"></div>
-                  <div className="w-full bg-blue-400 dark:bg-blue-600/70 rounded-t-sm h-[80%] hover:bg-blue-500 transition-colors"></div>
-                  <div className="w-full bg-blue-500 dark:bg-blue-500 rounded-t-sm h-[70%] hover:bg-blue-600 transition-colors"></div>
-                  <div className="w-full bg-blue-600 rounded-t-sm h-[95%] hover:bg-blue-700 transition-colors"></div>
-                  <div className="w-full bg-blue-700 rounded-t-sm h-[85%] hover:bg-blue-800 transition-colors"></div>
-                </div>
-                <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+
+                <div className="flex-1 w-full h-full">
+                  {chartType === 'line' && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData.revExpData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.1} />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                        <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                        <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#ef4444" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+
+                  {chartType === 'bar' && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData.revExpData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.1} />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                        <RechartsTooltip cursor={{fill: 'transparent'}} contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                        <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar dataKey="expenses" name="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+
+                  {(chartType === 'pie' || chartType === 'donut') && (
+                    <div className="w-full h-full flex flex-row items-center justify-center">
+                      <div className="relative w-1/2 h-full flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie 
+                              data={chartData.pieData} 
+                              cx="50%" 
+                              cy="50%" 
+                              innerRadius={chartType === 'donut' ? 65 : 0} 
+                              outerRadius={90} 
+                              paddingAngle={chartType === 'donut' ? 5 : 0} 
+                              dataKey="value"
+                              stroke="none"
+                            >
+                              {chartData.pieData.map((entry: any, index: number) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+
+                        {chartType === 'donut' && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Total Exp</p>
+                            <p className="text-xl font-bold text-slate-900 dark:text-white font-mono">{currencySymbol} {totalExpenses.toFixed(0)}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="w-1/2 flex flex-col items-start justify-center pl-4 space-y-3">
+                        {chartData.pieData.map((entry: any, index: number) => (
+                          <div key={index} className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{entry.name}</p>
+                              <p className="text-xs text-slate-500 font-mono">{currencySymbol} {entry.value.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* SECURITY ALERTS */}
               <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
                 <div className="mb-4">
                   <h3 className="text-sm font-bold text-slate-800 dark:text-white">Security Monitor</h3>
@@ -404,18 +541,36 @@ export default function DashboardPage() {
                   <p className="text-xs text-slate-400 mt-1">Your account is secure.</p>
                 </div>
               </div>
-
             </div>
 
-            {/* BOTTOM SECTION: CHART OF ACCOUNTS */}
+            {/* CHART OF ACCOUNTS */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                 <div>
                   <h3 className="text-sm font-bold text-slate-800 dark:text-white">Chart of Accounts</h3>
                   <p className="text-xs text-slate-500 mt-1">Standard general ledger accounts</p>
                 </div>
-                <button className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors">+ Add Account</button>
+                <button onClick={() => setIsAddingAccount(true)} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors">+ Add Account</button>
               </div>
+              
+              {/* ADD ACCOUNT FORM (INLINE) */}
+              {isAddingAccount && (
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-blue-50/20 dark:bg-blue-900/10 flex items-center gap-4">
+                  {accountError && <div className="text-red-500 text-xs font-bold w-full absolute mt-12">{accountError}</div>}
+                  <input type="text" placeholder="Code (e.g. 6100)" value={newCode} onChange={e => setNewCode(e.target.value)} className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-md outline-none focus:border-blue-500 text-sm" />
+                  <input type="text" placeholder="Account Name (e.g. Marketing)" value={newName} onChange={e => setNewName(e.target.value)} className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-md outline-none focus:border-blue-500 text-sm" />
+                  <select value={newType} onChange={e => setNewType(e.target.value)} className="w-40 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-md outline-none focus:border-blue-500 text-sm">
+                    <option value="Expense">Expense</option>
+                    <option value="Asset">Asset</option>
+                    <option value="Liability">Liability</option>
+                    <option value="Equity">Equity</option>
+                    <option value="Revenue">Revenue</option>
+                  </select>
+                  <button onClick={handleAddAccount} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-semibold text-sm transition-colors">Save</button>
+                  <button onClick={() => setIsAddingAccount(false)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white p-2"><X className="w-5 h-5" /></button>
+                </div>
+              )}
+
               <div className="max-h-[300px] overflow-y-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0">

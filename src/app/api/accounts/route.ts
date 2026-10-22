@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { decrypt } from '@/lib/auth';
 import { db } from '@/db';
@@ -12,12 +12,37 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
-    
-    // Fetch accounts for this specific tenant (user)
     const tenantAccounts = await db.select().from(accounts).where(eq(accounts.tenantId, payload.userId));
     
     return NextResponse.json({ accounts: tenantAccounts });
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch accounts" }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get('session')?.value;
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    
+    const payload = await decrypt(session);
+    const { code, name, type } = await req.json();
+
+    if (!code || !name || !type) {
+      return NextResponse.json({ error: "All fields are required" }, { status: 400 });
+    }
+
+    const [newAccount] = await db.insert(accounts).values({
+      tenantId: payload.userId,
+      code,
+      name,
+      type,
+      balance: '0.00'
+    }).returning();
+
+    return NextResponse.json({ success: true, account: newAccount });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
   }
 }
