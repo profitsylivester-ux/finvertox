@@ -1,9 +1,9 @@
 ﻿"use client";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Moon, Sun, ArrowRight, ShieldCheck, BarChart3, Database, Layers, Building2, Home as HomeIcon, Wallet, PieChart, Settings, PlayCircle, BookOpen, Lock, FileText, Cpu, Users, Box, CreditCard, ChevronDown, Briefcase, Store, Wrench, Globe } from "lucide-react";
 
-// FULL TRANSLATION DICTIONARY
 const translations = {
   English: {
     navPlatform: "Platform", navSolutions: "Solutions", navSecurity: "Security", navResources: "Resources",
@@ -91,23 +91,19 @@ export default function Home() {
   };
 
   return (
-    <div className={`h-screen min-h-[700px] overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-950 font-sans selection:bg-blue-200 dark:selection:bg-blue-900 transition-colors duration-300 relative ${isRTL ? 'dir-rtl' : ''}`}>
+    <div className={`min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 font-sans selection:bg-blue-200 dark:selection:bg-blue-900 transition-colors duration-300 relative ${isRTL ? 'dir-rtl' : ''}`}>
       
-      {/* PREMIUM ANIMATED BACKGROUND (Glowing Mesh) */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-blue-400/20 dark:bg-blue-600/10 blur-[120px] animate-pulse duration-[10000ms]"></div>
         <div className="absolute top-[20%] right-[0%] w-[40%] h-[60%] rounded-full bg-indigo-400/20 dark:bg-indigo-600/10 blur-[120px] animate-pulse duration-[8000ms]"></div>
       </div>
 
-      {/* Subtle Background Grid Pattern */}
       <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none"></div>
 
-      {/* Main Navigation */}
       <nav className="relative z-50 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl h-20 shrink-0 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
           
-          {/* LOGO WITH CUSTOM V ICON */}
-          <div className="flex items-center gap-2.5 cursor-pointer group">
+          <Link href="/" className="flex items-center gap-2.5 cursor-pointer group">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm group-hover:bg-blue-700 transition-all duration-300">
               <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 6l8 12 8-12" />
@@ -116,12 +112,10 @@ export default function Home() {
             <span className="font-[family-name:var(--font-jakarta)] font-extrabold text-[1.7rem] tracking-tighter text-blue-600 dark:text-blue-500 transition-colors pt-1">
               finvortex
             </span>
-          </div>
+          </Link>
           
-          {/* Desktop Mega-Menu */}
           <div className="hidden lg:flex space-x-6 text-sm font-semibold text-slate-600 dark:text-slate-300">
             
-            {/* 1. PLATFORM DROPDOWN */}
             <div className="relative group cursor-pointer py-7">
               <span className="hover:text-blue-700 dark:hover:text-blue-500 transition-colors flex items-center gap-1.5">
                 {t.navPlatform} <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover:rotate-180 transition-transform duration-200" />
@@ -154,7 +148,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 2. SOLUTIONS DROPDOWN */}
             <div className="relative group cursor-pointer py-7">
               <span className="hover:text-blue-700 dark:hover:text-blue-500 transition-colors flex items-center gap-1.5">
                 {t.navSolutions} <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover:rotate-180 transition-transform duration-200" />
@@ -175,7 +168,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 3. SECURITY DROPDOWN - RESTORED TO 4 ITEMS */}
             <div className="relative group cursor-pointer py-7">
               <span className="hover:text-blue-700 dark:hover:text-blue-500 transition-colors flex items-center gap-1.5">
                 {t.navSecurity} <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover:rotate-180 transition-transform duration-200" />
@@ -200,7 +192,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 4. RESOURCES DROPDOWN */}
             <div className="relative group cursor-pointer py-7">
               <span className="hover:text-blue-700 dark:hover:text-blue-500 transition-colors flex items-center gap-1.5">
                 {t.navResources} <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover:rotate-180 transition-transform duration-200" />
@@ -219,10 +210,8 @@ export default function Home() {
 
           </div>
 
-          {/* Right Side Actions */}
           <div className="flex items-center gap-3">
             
-            {/* LANGUAGE DROPDOWN */}
             <div className="relative group cursor-pointer py-2 flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-500 transition-colors mr-2">
               <Globe className="w-4 h-4" />
               <span>{getLangAbbr(lang)}</span>
@@ -247,19 +236,21 @@ export default function Home() {
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <a href="#" className="hidden sm:block text-sm font-semibold hover:text-blue-700 dark:hover:text-blue-500 transition-colors px-2">{t.signIn}</a>
-            <a href="#" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95">
+            
+            <Link href="/login" className="hidden sm:block text-sm font-semibold hover:text-blue-700 dark:hover:text-blue-500 transition-colors px-2">
+              {t.signIn}
+            </Link>
+            
+            <Link href="/register" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95">
               {t.getStarted}
-            </a>
+            </Link>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
       <main className="relative z-10 flex-1 max-w-7xl mx-auto px-6 w-full flex items-center justify-center">
-        <div className={`grid lg:grid-cols-2 gap-16 items-center w-full py-4 ${isRTL ? 'direction-rtl' : ''}`}>
+        <div className={`grid lg:grid-cols-2 gap-16 items-center w-full py-12 ${isRTL ? 'direction-rtl' : ''}`}>
           
-          {/* Left Column - Dynamic Translated Text */}
           <div className={`max-w-xl ${isRTL ? 'text-right' : 'text-left'}`}>
             <p className="font-serif text-lg md:text-xl text-slate-500 dark:text-slate-400 mb-4 font-medium transition-all duration-300">
               {t.tagline}
@@ -280,10 +271,10 @@ export default function Home() {
             </div>
             
             <div className={`flex flex-col sm:flex-row gap-4 ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
-              <button className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white transition-all duration-200 bg-blue-800 rounded-full hover:bg-blue-900 hover:shadow-[0_8px_30px_rgb(30,58,138,0.3)] hover:-translate-y-0.5 active:scale-95">
+              <Link href="/login" className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white transition-all duration-200 bg-blue-800 rounded-full hover:bg-blue-900 hover:shadow-[0_8px_30px_rgb(30,58,138,0.3)] hover:-translate-y-0.5 active:scale-95">
                 <PlayCircle className={`w-5 h-5 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                 {t.demoBtn}
-              </button>
+              </Link>
               
               <button className="group inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-500 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95">
                 <BookOpen className={`w-5 h-5 text-slate-400 ${isRTL ? 'ml-2' : 'mr-2'}`} />
@@ -291,7 +282,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Professional & Universal Stats */}
             <div className="mt-10 pt-6 border-t border-slate-300 dark:border-slate-800 grid grid-cols-3 gap-6">
               <div>
                 <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{t.stats1}</p>
@@ -308,7 +298,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right Column: LIVE Phone Mockup */}
           <div className="hidden lg:flex justify-center relative perspective-1000 lg:mr-12">
             
             <div className="phone-container relative w-[300px] h-[600px] bg-slate-950 rounded-[2.5rem] border-[8px] border-slate-900 shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/10">
@@ -321,7 +310,6 @@ export default function Home() {
                 
                 <div className="animate-scroll-up space-y-4 px-3 pb-20">
                   
-                  {/* === SCREEN 1 === */}
                   <div className={`flex justify-between items-center text-slate-900 dark:text-white mb-4 mt-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className={isRTL ? 'text-right' : 'text-left'}>
                       <h3 className="font-bold text-lg">{t.phoneFinance}</h3>
@@ -369,7 +357,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* === SCREEN 2 (Duplicate for seamless scroll) === */}
                   <div className={`flex justify-between items-center text-slate-900 dark:text-white mb-4 mt-8 pt-4 border-t border-slate-200 dark:border-slate-800 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className={isRTL ? 'text-right' : 'text-left'}>
                       <h3 className="font-bold text-lg">{t.phoneInvoices}</h3>
@@ -406,7 +393,6 @@ export default function Home() {
 
               </div>
               
-              {/* Bottom Navigation Bar */}
               <div className={`absolute bottom-0 inset-x-0 h-14 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-around z-20 pb-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div className="flex flex-col items-center gap-1 text-blue-600 dark:text-blue-400">
                   <HomeIcon className="w-4 h-4" />
@@ -431,6 +417,72 @@ export default function Home() {
 
         </div>
       </main>
+
+      {/* PROFESSIONAL ENTERPRISE FOOTER */}
+      <footer className="relative z-10 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm pt-16 pb-8">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Product</h4>
+              <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Accounting</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Invoicing</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Inventory</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Payroll</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Vortex AI</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Company</h4>
+              <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">About Us</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Careers</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Contact</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Press</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Resources</h4>
+              <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Documentation</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">API Reference</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Trust Center</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">System Status</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Legal</h4>
+              <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Security</a></li>
+                <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Compliance</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 6l8 12 8-12" />
+                </svg>
+              </div>
+              <span className="font-extrabold text-lg tracking-tighter text-slate-900 dark:text-white pt-0.5">finvortex</span>
+            </div>
+            
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              &copy; {new Date().getFullYear()} FinVortex Technologies. All rights reserved.
+            </p>
+            
+            <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-500">
+               <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> SOC 2 Type II</span>
+               <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> 256-bit Encryption</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }
