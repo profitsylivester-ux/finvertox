@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, FileText, CheckCircle2, DollarSign } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileText } from "lucide-react";
 
 export default function InvoicesPage() {
   const router = useRouter();
@@ -12,11 +12,21 @@ export default function InvoicesPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState("");
 
-  // Form State
+  // Form State - Default to empty to prevent hydration mismatch
   const [customerId, setCustomerId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [date, setDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [items, setItems] = useState([{ description: "", quantity: "1", unitPrice: "" }]);
+
+  // Set dates safely
+  useEffect(() => {
+    const today = new Date();
+    const twoWeeks = new Date(today);
+    twoWeeks.setDate(today.getDate() + 14);
+    
+    setDate(today.toISOString().split('T')[0]);
+    setDueDate(twoWeeks.toISOString().split('T')[0]);
+  }, []);
 
   const fetchData = () => {
     Promise.all([

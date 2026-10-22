@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Printer, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, Printer, CheckCircle2, Clock, DollarSign } from "lucide-react";
 
 export default function InvoiceViewPage() {
   const params = useParams();
@@ -36,9 +36,17 @@ export default function InvoiceViewPage() {
         <Link href="/dashboard/invoices" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Invoices
         </Link>
-        <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm">
-          <Printer className="w-4 h-4" /> Print / Save as PDF
-        </button>
+        
+        <div className="flex gap-3">
+          {invoice.status !== "paid" && (
+            <Link href={`/pay/${invoice.id}`} target="_blank" className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm">
+              <DollarSign className="w-4 h-4" /> Pay Online
+            </Link>
+          )}
+          <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm">
+            <Printer className="w-4 h-4" /> Print / Save as PDF
+          </button>
+        </div>
       </div>
 
       {/* A4 PAPER */}
