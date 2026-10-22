@@ -6,7 +6,7 @@ import Link from "next/link";
 import { 
   LayoutDashboard, Briefcase, Book, Landmark, FileText, CheckSquare, Trash, Target,
   Wallet, ShoppingCart, CreditCard, Receipt, Folder, ShieldAlert, Users, History,
-  Bell, ChevronDown, Lock, Building2, Sun, Moon, TrendingDown, Activity, X, Package
+  Bell, ChevronDown, Lock, Building2, Sun, Moon, TrendingDown, Activity, X, Package, TrendingUp
 } from "lucide-react";
 import { 
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -57,6 +57,7 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
   const [chartData, setChartData] = useState<any>({ revExpData: [], pieData: [] });
+  const [metrics, setMetrics] = useState<any>({ totalSales: 0, receivables: 0, overdueCount: 0 });
   const [chartType, setChartType] = useState<"line" | "bar" | "pie" | "donut">("line");
   const [isLoading, setIsLoading] = useState(true);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
@@ -86,9 +87,10 @@ export default function DashboardPage() {
     setMounted(true);
     const fetchData = async () => {
       try {
-        const [userRes, chartsRes] = await Promise.all([
+        const [userRes, chartsRes, metricsRes] = await Promise.all([
           fetch("/api/auth/me"),
-          fetch("/api/dashboard/charts")
+          fetch("/api/dashboard/charts"),
+          fetch("/api/dashboard/metrics")
         ]);
 
         if (!userRes.ok) {
@@ -98,9 +100,11 @@ export default function DashboardPage() {
 
         const userData = await userRes.json();
         const chartsData = await chartsRes.json();
+        const metricsData = await metricsRes.json();
         
         setUser(userData);
         setChartData(chartsData);
+        setMetrics(metricsData);
         
         fetchAccounts();
         fetchLogs();
@@ -169,7 +173,6 @@ export default function DashboardPage() {
   const roleTitle = isCEO ? "CEO" : user?.role ? user.role.replace('_', ' ').toUpperCase() : "STAFF";
 
   const totalAssets = accounts.filter(a => a.type === 'Asset').reduce((sum, a) => sum + parseFloat(a.balance), 0);
-  const totalLiabilities = accounts.filter(a => a.type === 'Liability').reduce((sum, a) => sum + parseFloat(a.balance), 0);
   const unreadCount = logs.filter(l => !l.isRead).length;
   const totalExpenses = chartData.pieData.reduce((sum: number, item: any) => sum + item.value, 0);
 
@@ -222,7 +225,6 @@ export default function DashboardPage() {
             <Link href="/dashboard/trash" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Trash className="w-4 h-4" /> Trash
             </Link>
-            {/* THE MISSING LINK IS NOW HERE */}
             <Link href="/dashboard/approvals" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <CheckSquare className="w-4 h-4" /> Approvals
             </Link>
@@ -230,11 +232,11 @@ export default function DashboardPage() {
 
           <div>
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Sales & Purchases</p>
-            <Link href="/dashboard/inventory" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <Package className="w-4 h-4" /> Inventory
-            </Link>
             <Link href="/dashboard/customers" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Users className="w-4 h-4" /> Customers
+            </Link>
+            <Link href="/dashboard/inventory" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+              <Package className="w-4 h-4" /> Inventory
             </Link>
             <Link href="/dashboard/suppliers" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Building2 className="w-4 h-4" /> Suppliers
@@ -398,6 +400,7 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Welcome back, {displayName}. Here is your financial overview.</p>
             </div>
 
+            {/* LIVE KPI CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-2">
@@ -410,29 +413,29 @@ export default function DashboardPage() {
 
               <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-2">
-                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Liabilities</p>
-                  <div className="p-1.5 bg-red-50 dark:bg-red-900/30 rounded-md text-red-600 dark:text-red-400"><TrendingDown className="w-4 h-4" /></div>
+                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Sales</p>
+                  <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-md text-emerald-600 dark:text-emerald-400"><TrendingUp className="w-4 h-4" /></div>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{currencySymbol} {totalLiabilities.toFixed(2)}</h3>
-                <p className="text-xs text-slate-400 mt-1">Money owed to suppliers</p>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{currencySymbol} {metrics.totalSales.toFixed(2)}</h3>
+                <p className="text-xs text-slate-400 mt-1">All-time invoiced revenue</p>
               </div>
 
               <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-2">
-                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Accounts</p>
-                  <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-md text-emerald-600 dark:text-emerald-400"><FileText className="w-4 h-4" /></div>
+                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Receivables</p>
+                  <div className="p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded-md text-amber-600 dark:text-amber-400"><FileText className="w-4 h-4" /></div>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{accounts.length}</h3>
-                <p className="text-xs text-slate-400 mt-1">Chart of Accounts</p>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{currencySymbol} {metrics.receivables.toFixed(2)}</h3>
+                <p className="text-xs text-slate-400 mt-1">Outstanding customer debts</p>
               </div>
 
               <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-2">
                   <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Overdue Invoices</p>
-                  <div className="p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded-md text-amber-600 dark:text-amber-400"><Activity className="w-4 h-4" /></div>
+                  <div className="p-1.5 bg-red-50 dark:bg-red-900/30 rounded-md text-red-600 dark:text-red-400"><Activity className="w-4 h-4" /></div>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">0</h3>
-                <p className="text-xs text-slate-400 mt-1">AR: 0 - AP: 0</p>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{metrics.overdueCount}</h3>
+                <p className="text-xs text-slate-400 mt-1">Past due date</p>
               </div>
             </div>
 
