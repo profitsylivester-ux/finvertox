@@ -255,6 +255,9 @@ export default function DashboardPage() {
 
           <div className="pb-4">
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Administration</p>
+            <Link href="/dashboard/users" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+              <Users className="w-4 h-4" /> Users & Roles
+            </Link>
             <Link href="/dashboard/audit-trail" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <History className="w-4 h-4" /> Audit Trail
             </Link>

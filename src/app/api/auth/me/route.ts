@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { decrypt } from '@/lib/auth';
 import { db } from '@/db';
@@ -9,7 +9,6 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
     const session = cookieStore.get('session')?.value;
-    
     if (!session) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
     const payload = await decrypt(session);
@@ -19,12 +18,13 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     return NextResponse.json({
+      id: user.id, // THIS IS THE FIX
       firstName: user.firstName,
       lastName: user.lastName,
       companyName: user.companyName,
       email: user.email,
       role: user.role,
-      currency: user.currency // NEW
+      currency: user.currency
     });
   } catch (error) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

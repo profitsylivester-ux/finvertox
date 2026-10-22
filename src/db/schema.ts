@@ -1,7 +1,19 @@
-import { pgTable, serial, text, timestamp, decimal, integer, boolean } from 'drizzle-orm/pg-core';
+﻿import { pgTable, serial, text, timestamp, decimal, integer, boolean } from 'drizzle-orm/pg-core';
 
 export const financeTerms = pgTable('finance_terms', { id: serial('id').primaryKey(), term: text('term').notNull(), keywords: text('keywords').notNull(), definition: text('definition').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
-export const users = pgTable('users', { id: serial('id').primaryKey(), email: text('email').notNull().unique(), passwordHash: text('password_hash').notNull(), firstName: text('first_name').notNull(), lastName: text('last_name').notNull(), companyName: text('company_name').notNull(), role: text('role').default('admin').notNull(), currency: text('currency').default('TZS').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
+export const users = pgTable('users', { 
+  id: serial('id').primaryKey(), 
+  tenantId: integer('tenant_id'), 
+  email: text('email').notNull().unique(), 
+  passwordHash: text('password_hash').notNull(), 
+  firstName: text('first_name').notNull(), 
+  lastName: text('last_name').notNull(), 
+  companyName: text('company_name').notNull(), 
+  role: text('role').default('admin').notNull(), 
+  status: text('status').default('active').notNull(), // NEW: active or suspended
+  currency: text('currency').default('TZS').notNull(), 
+  createdAt: timestamp('created_at').defaultNow().notNull() 
+});
 export const accounts = pgTable('accounts', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), code: text('code').notNull(), name: text('name').notNull(), type: text('type').notNull(), balance: decimal('balance', { precision: 15, scale: 2 }).default('0.00').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const journalEntries = pgTable('journal_entries', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), date: text('date').notNull(), description: text('description').notNull(), reference: text('reference'), status: text('status').default('posted').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const journalLines = pgTable('journal_lines', { id: serial('id').primaryKey(), journalId: integer('journal_id').references(() => journalEntries.id).notNull(), accountId: integer('account_id').references(() => accounts.id).notNull(), type: text('type').notNull(), amount: decimal('amount', { precision: 15, scale: 2 }).notNull() });
@@ -17,14 +29,4 @@ export const companySettings = pgTable('company_settings', { id: serial('id').pr
 export const deletedRecords = pgTable('deleted_records', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), recordType: text('record_type').notNull(), recordId: integer('record_id').notNull(), recordData: text('record_data').notNull(), status: text('status').default('pending_deletion').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const bankAccounts = pgTable('bank_accounts', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), name: text('name').notNull(), accountNumber: text('account_number'), type: text('type').notNull(), balance: decimal('balance', { precision: 15, scale: 2 }).default('0.00').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const activityLogs = pgTable('activity_logs', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), userName: text('user_name').notNull(), action: text('action').notNull(), details: text('details').notNull(), isRead: boolean('is_read').default(false).notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
-
-// NEW: BUDGETS TABLE
-export const budgets = pgTable('budgets', {
-  id: serial('id').primaryKey(),
-  tenantId: integer('tenant_id').references(() => users.id).notNull(),
-  accountId: integer('account_id').references(() => accounts.id).notNull(), // Which Expense category
-  month: integer('month').notNull(),
-  year: integer('year').notNull(),
-  allocatedAmount: decimal('allocated_amount', { precision: 15, scale: 2 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+export const budgets = pgTable('budgets', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), accountId: integer('account_id').references(() => accounts.id).notNull(), month: integer('month').notNull(), year: integer('year').notNull(), allocatedAmount: decimal('allocated_amount', { precision: 15, scale: 2 }).notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
