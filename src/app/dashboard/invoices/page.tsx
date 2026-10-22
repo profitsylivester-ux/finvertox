@@ -1,9 +1,11 @@
 ﻿"use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, FileText, CheckCircle2, DollarSign } from "lucide-react";
 
 export default function InvoicesPage() {
+  const router = useRouter();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,7 +88,6 @@ export default function InvoicesPage() {
             )}
           </div>
 
-          {/* CREATE INVOICE FORM */}
           {isCreating && (
             <div className="p-6 border-b border-slate-200 bg-blue-50/10">
               <h2 className="text-lg font-bold text-slate-900 mb-4">Create Invoice</h2>
@@ -154,7 +155,6 @@ export default function InvoicesPage() {
             </div>
           )}
 
-          {/* INVOICE LIST */}
           <div className="overflow-x-auto">
             {isLoading && !isCreating ? (
               <div className="p-12 text-center text-slate-500">Loading invoices...</div>
@@ -178,17 +178,23 @@ export default function InvoicesPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {invoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">{inv.invoiceNumber}</td>
+                    <tr 
+                      key={inv.id} 
+                      onClick={() => router.push(`/dashboard/invoices/${inv.id}`)}
+                      className="hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-6 py-4 font-mono text-xs font-bold text-blue-600">{inv.invoiceNumber}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{inv.customerName}</td>
                       <td className="px-6 py-4 text-slate-600">{inv.date}</td>
                       <td className="px-6 py-4 text-slate-600">{inv.dueDate}</td>
                       <td className="px-6 py-4 text-right font-mono font-bold text-slate-900">{parseFloat(inv.total).toFixed(2)}</td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          inv.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                          inv.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 
+                          inv.status === 'pending_approval' ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-700'
                         }`}>
-                          {inv.status}
+                          {inv.status.replace('_', ' ')}
                         </span>
                       </td>
                     </tr>
