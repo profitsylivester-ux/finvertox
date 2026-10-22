@@ -1,11 +1,12 @@
 ﻿"use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, DollarSign, Wallet } from "lucide-react";
+import { ArrowLeft, DollarSign, Wallet, Landmark } from "lucide-react";
 
 export default function BillPaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
   const [unpaidExpenses, setUnpaidExpenses] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState("");
@@ -15,14 +16,17 @@ export default function BillPaymentsPage() {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [method, setMethod] = useState("Bank Transfer");
+  const [bankAccountId, setBankAccountId] = useState("");
 
   const fetchData = () => {
     Promise.all([
       fetch("/api/expense-payments").then(res => res.json()),
-      fetch("/api/expenses").then(res => res.json())
-    ]).then(([paymentsData, expensesData]) => {
+      fetch("/api/expenses").then(res => res.json()),
+      fetch("/api/treasury").then(res => res.json())
+    ]).then(([paymentsData, expensesData, treasuryData]) => {
       setPayments(paymentsData.payments || []);
       setUnpaidExpenses((expensesData.expenses || []).filter((exp: any) => exp.status === 'unpaid'));
+      setBankAccounts(treasuryData.accounts || []);
       setIsLoading(false);
     });
   };
@@ -41,17 +45,29 @@ export default function BillPaymentsPage() {
     setError("");
     setIsLoading(true);
 
+    if (!bankAccountId) {
+      setError("Please select a bank account.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/expense-payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expenseId: parseInt(expenseId), amount, date, method }),
+        body: JSON.stringify({ 
+          expenseId: parseInt(expenseId), 
+          amount, 
+          date, 
+          method, 
+          bankAccountId: parseInt(bankAccountId) 
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
       setIsRecording(false);
-      setExpenseId(""); setAmount("");
+      setExpenseId(""); setAmount(""); setBankAccountId("");
       fetchData();
     } catch (err: any) {
       setError(err.message);
@@ -71,12 +87,13 @@ export default function BillPaymentsPage() {
           <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Bill Payments</h1>
-              <p className="text-sm text-slate-500 mt-1">Record money leaving your account to pay suppliers.</p>
+              <p className="text-sm text-slate-500 mt-1">Record money leaving your bank accounts to pay suppliers.</p>
             </div>
             {!isRecording && (
               <button 
                 onClick={() => {
                   if (unpaidExpenses.length === 0) return alert("No unpaid expenses to pay.");
+                  if (bankAccounts.length === 0) return alert("Please add a bank account in Treasury first.");
                   setIsRecording(true);
                 }} 
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors"
@@ -93,7 +110,7 @@ export default function BillPaymentsPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Select Unpaid Expense</label>
                     <select required value={expenseId} onChange={handleExpenseChange} className="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-blue-500">
                       <option value="">Select Expense...</option>
@@ -103,6 +120,16 @@ export default function BillPaymentsPage() {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Amount Paid</label>
                     <input type="number" required step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md outline-none focus:border-blue-500 font-mono font-bold text-red-600" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Pay From (Bank Account)</label>
+                    <div className="relative">
+                      <Landmark className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                      <select required value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md outline-none focus:border-blue-500">
+                        <option value="">Select Account...</option>
+                        {bankAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} (Bal: {acc.balance})</option>)}
+                      </select>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Payment Date</label>
@@ -142,7 +169,7 @@ export default function BillPaymentsPage() {
                     <th className="px-6 py-4 font-semibold text-slate-600">Date</th>
                     <th className="px-6 py-4 font-semibold text-slate-600">Supplier</th>
                     <th className="px-6 py-4 font-semibold text-slate-600">Description</th>
-                    <th className="px-6 py-4 font-semibold text-slate-600">Method</th>
+                    <th className="px-6 py-4 font-semibold text-slate-600">Paid From</th>
                     <th className="px-6 py-4 font-semibold text-slate-600 text-right">Amount Paid</th>
                   </tr>
                 </thead>
@@ -152,7 +179,7 @@ export default function BillPaymentsPage() {
                       <td className="px-6 py-4 font-medium text-slate-900">{pmt.date}</td>
                       <td className="px-6 py-4 text-slate-700 font-medium">{pmt.supplierName}</td>
                       <td className="px-6 py-4 text-slate-600">{pmt.description}</td>
-                      <td className="px-6 py-4 text-slate-600">{pmt.method}</td>
+                      <td className="px-6 py-4 text-slate-600 text-xs font-semibold">{pmt.bankName || "Unknown"}</td>
                       <td className="px-6 py-4 text-right font-mono font-bold text-red-600">-{parseFloat(pmt.amount).toFixed(2)}</td>
                     </tr>
                   ))}
