@@ -18,7 +18,8 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     return NextResponse.json({
-      id: user.id, // THIS IS THE FIX
+      id: user.id,
+      tenantId: user.tenantId || user.id, // If CEO, tenantId is their own ID
       firstName: user.firstName,
       lastName: user.lastName,
       companyName: user.companyName,

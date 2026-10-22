@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { users, activityLogs } from '@/db/schema';
 import bcrypt from 'bcryptjs';
@@ -16,13 +16,23 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
+    
+    if (user.status === 'suspended') {
+      return NextResponse.json({ error: "Account suspended. Contact your CEO." }, { status: 403 });
+    }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    const session = await encrypt({ userId: user.id, email: user.email, role: user.role });
+    // Include tenantId in the secure token
+    const session = await encrypt({ 
+      userId: user.id, 
+      tenantId: user.tenantId || user.id, 
+      email: user.email, 
+      role: user.role 
+    });
 
     const cookieStore = await cookies();
     cookieStore.set('session', session, {
@@ -33,9 +43,8 @@ export async function POST(req: Request) {
       maxAge: 60 * 60 * 24,
     });
 
-    // LOG THE ACTIVITY
     await db.insert(activityLogs).values({
-      tenantId: user.id,
+      tenantId: user.tenantId || user.id,
       userName: `${user.firstName} ${user.lastName}`,
       action: 'LOGIN',
       details: `Signed in to the workspace`

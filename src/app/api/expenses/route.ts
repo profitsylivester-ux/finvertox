@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { decrypt } from '@/lib/auth';
 import { db } from '@/db';
 import { expenses, suppliers, accounts, journalEntries, journalLines, fiscalPeriods } from '@/db/schema';
-import { eq, sql, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm'; // sql added
 
 export async function GET() {
   try {
@@ -12,6 +12,8 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
+    const tenantId = payload.tenantId || payload.userId;
+    
     const list = await db.select({
       id: expenses.id,
       date: expenses.date,
@@ -24,7 +26,7 @@ export async function GET() {
     .from(expenses)
     .leftJoin(suppliers, eq(expenses.supplierId, suppliers.id))
     .leftJoin(accounts, eq(expenses.expenseAccountId, accounts.id))
-    .where(eq(expenses.tenantId, payload.userId))
+    .where(eq(expenses.tenantId, tenantId))
     .orderBy(desc(expenses.createdAt));
     
     return NextResponse.json({ expenses: list });
@@ -40,10 +42,10 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
-    const tenantId = payload.userId;
+    const tenantId = payload.tenantId || payload.userId;
+    const isCEO = payload.role === 'admin';
     const { supplierId, expenseAccountId, date, description, amount } = await req.json();
 
-    // Check period
     const entryDate = new Date(date);
     const entryMonth = entryDate.getMonth() + 1;
     const entryYear = entryDate.getFullYear();
@@ -52,30 +54,31 @@ export async function POST(req: Request) {
     );
     if (existingPeriod.length > 0) return NextResponse.json({ error: "Cannot record expense in a closed period." }, { status: 400 });
 
-    // Save Expense
+    const initialStatus = isCEO ? 'unpaid' : 'pending_approval';
+    
     const [newExpense] = await db.insert(expenses).values({
-      tenantId, supplierId, expenseAccountId, date, description, amount: amount.toString(), status: 'unpaid'
+      tenantId, supplierId, expenseAccountId, date, description, amount: amount.toString(), status: initialStatus
     }).returning();
 
-    // AUTOMATIC JOURNAL ENTRY (Debit Expense, Credit Accounts Payable)
-    const [apAccount] = await db.select().from(accounts).where(and(eq(accounts.tenantId, tenantId), eq(accounts.code, '2000')));
-    
-    if (apAccount) {
-      const [journalEntry] = await db.insert(journalEntries).values({
-        tenantId, date, description: `Expense: ${description}`, reference: `EXP-${newExpense.id}`, status: 'posted'
-      }).returning();
+    if (isCEO) {
+      const [apAccount] = await db.select().from(accounts).where(and(eq(accounts.tenantId, tenantId), eq(accounts.code, '2000')));
+      
+      if (apAccount) {
+        const [journalEntry] = await db.insert(journalEntries).values({
+          tenantId, date, description: `Expense: ${description}`, reference: `EXP-${newExpense.id}`, status: 'posted'
+        }).returning();
 
-      // Debit Expense Account
-      await db.insert(journalLines).values({ journalId: journalEntry.id, accountId: expenseAccountId, type: 'debit', amount: amount.toString() });
-      await db.update(accounts).set({ balance: sql`${accounts.balance} + ${amount}` }).where(eq(accounts.id, expenseAccountId));
+        await db.insert(journalLines).values({ journalId: journalEntry.id, accountId: expenseAccountId, type: 'debit', amount: amount.toString() });
+        await db.update(accounts).set({ balance: sql`${accounts.balance} + ${amount}` }).where(eq(accounts.id, expenseAccountId));
 
-      // Credit Accounts Payable
-      await db.insert(journalLines).values({ journalId: journalEntry.id, accountId: apAccount.id, type: 'credit', amount: amount.toString() });
-      await db.update(accounts).set({ balance: sql`${accounts.balance} + ${amount}` }).where(eq(accounts.id, apAccount.id));
+        await db.insert(journalLines).values({ journalId: journalEntry.id, accountId: apAccount.id, type: 'credit', amount: amount.toString() });
+        await db.update(accounts).set({ balance: sql`${accounts.balance} + ${amount}` }).where(eq(accounts.id, apAccount.id));
+      }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("Expense error:", error);
     return NextResponse.json({ error: "Failed to record expense" }, { status: 500 });
   }
 }

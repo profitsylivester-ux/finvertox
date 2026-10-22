@@ -12,7 +12,10 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
-    const tenantAccounts = await db.select().from(accounts).where(eq(accounts.tenantId, payload.userId));
+    // Use the tenantId (which points to the CEO) instead of the user's own ID
+    const tenantId = payload.tenantId || payload.userId; 
+    
+    const tenantAccounts = await db.select().from(accounts).where(eq(accounts.tenantId, tenantId));
     
     return NextResponse.json({ accounts: tenantAccounts });
   } catch (error) {
@@ -27,6 +30,7 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
+    const tenantId = payload.tenantId || payload.userId;
     const { code, name, type } = await req.json();
 
     if (!code || !name || !type) {
@@ -34,7 +38,7 @@ export async function POST(req: Request) {
     }
 
     const [newAccount] = await db.insert(accounts).values({
-      tenantId: payload.userId,
+      tenantId: tenantId,
       code,
       name,
       type,

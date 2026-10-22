@@ -222,6 +222,10 @@ export default function DashboardPage() {
             <Link href="/dashboard/trash" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Trash className="w-4 h-4" /> Trash
             </Link>
+            {/* THE MISSING LINK IS NOW HERE */}
+            <Link href="/dashboard/approvals" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+              <CheckSquare className="w-4 h-4" /> Approvals
+            </Link>
           </div>
 
           <div>
@@ -555,7 +559,7 @@ export default function DashboardPage() {
                 </div>
                 <button onClick={() => setIsAddingAccount(true)} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors">+ Add Account</button>
               </div>
-              
+
               {/* ADD ACCOUNT FORM (INLINE) */}
               {isAddingAccount && (
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-blue-50/20 dark:bg-blue-900/10 flex items-center gap-4">
