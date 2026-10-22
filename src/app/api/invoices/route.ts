@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { decrypt } from '@/lib/auth';
 import { db } from '@/db';
-import { invoices, invoiceItems, customers, accounts, journalEntries, journalLines, fiscalPeriods, activityLogs, users } from '@/db/schema';
+import { invoices, invoiceItems, customers, accounts, journalEntries, journalLines, fiscalPeriods, activityLogs, users, products } from '@/db/schema';
 import { eq, sql, and, desc } from 'drizzle-orm';
 
 export async function GET() {
@@ -12,6 +12,8 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
+    const tenantId = payload.tenantId || payload.userId;
+    
     const list = await db.select({
       id: invoices.id,
       invoiceNumber: invoices.invoiceNumber,
@@ -23,7 +25,7 @@ export async function GET() {
     })
     .from(invoices)
     .leftJoin(customers, eq(invoices.customerId, customers.id))
-    .where(eq(invoices.tenantId, payload.userId))
+    .where(eq(invoices.tenantId, tenantId))
     .orderBy(desc(invoices.createdAt));
     
     return NextResponse.json({ invoices: list });
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
-    const tenantId = payload.userId;
+    const tenantId = payload.tenantId || payload.userId;
     const { customerId, date, dueDate, items } = await req.json();
 
     const entryDate = new Date(date);
@@ -64,14 +66,22 @@ export async function POST(req: Request) {
       tenantId, customerId, invoiceNumber, date, dueDate, status: 'unpaid', subtotal: subtotal.toString(), total: total.toString()
     }).returning();
 
+    // Save items and deduct stock if product is linked
     for (const item of items) {
       await db.insert(invoiceItems).values({
         invoiceId: newInvoice.id,
+        productId: item.productId ? parseInt(item.productId) : null,
         description: item.description,
         quantity: item.quantity.toString(),
         unitPrice: item.unitPrice.toString(),
         total: (parseFloat(item.quantity) * parseFloat(item.unitPrice)).toString()
       });
+
+      if (item.productId) {
+        await db.update(products)
+          .set({ stockQuantity: sql`${products.stockQuantity} - ${item.quantity}` })
+          .where(and(eq(products.id, parseInt(item.productId)), eq(products.tenantId, tenantId)));
+      }
     }
 
     const [arAccount] = await db.select().from(accounts).where(and(eq(accounts.tenantId, tenantId), eq(accounts.code, '1100')));
@@ -89,8 +99,7 @@ export async function POST(req: Request) {
       await db.update(accounts).set({ balance: sql`${accounts.balance} + ${total}` }).where(eq(accounts.id, salesAccount.id));
     }
 
-    // LOG THE ACTIVITY
-    const [user] = await db.select().from(users).where(eq(users.id, tenantId));
+    const [user] = await db.select().from(users).where(eq(users.id, payload.userId));
     await db.insert(activityLogs).values({
       tenantId,
       userName: `${user.firstName} ${user.lastName}`,

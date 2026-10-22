@@ -20,22 +20,19 @@ export const journalLines = pgTable('journal_lines', { id: serial('id').primaryK
 export const fiscalPeriods = pgTable('fiscal_periods', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), month: integer('month').notNull(), year: integer('year').notNull(), status: text('status').default('open').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const customers = pgTable('customers', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), name: text('name').notNull(), email: text('email'), phone: text('phone'), address: text('address'), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const invoices = pgTable('invoices', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), customerId: integer('customer_id').references(() => customers.id).notNull(), invoiceNumber: text('invoice_number').notNull(), date: text('date').notNull(), dueDate: text('due_date').notNull(), status: text('status').default('unpaid').notNull(), subtotal: decimal('subtotal', { precision: 15, scale: 2 }).notNull(), total: decimal('total', { precision: 15, scale: 2 }).notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
-export const invoiceItems = pgTable('invoice_items', { id: serial('id').primaryKey(), invoiceId: integer('invoice_id').references(() => invoices.id).notNull(), description: text('description').notNull(), quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(), unitPrice: decimal('unit_price', { precision: 15, scale: 2 }).notNull(), total: decimal('total', { precision: 15, scale: 2 }).notNull() });
 
-// UPDATED: Added provider and phoneNumber for gateway tracking
-export const payments = pgTable('payments', { 
+// UPDATED: Added productId to invoiceItems
+export const invoiceItems = pgTable('invoice_items', { 
   id: serial('id').primaryKey(), 
-  tenantId: integer('tenant_id').references(() => users.id).notNull(), 
   invoiceId: integer('invoice_id').references(() => invoices.id).notNull(), 
-  bankAccountId: integer('bank_account_id').references(() => bankAccounts.id),
-  provider: text('provider').default('Manual').notNull(), // NEW: e.g., 'M-Pesa', 'Tigo', 'Bank'
-  phoneNumber: text('phone_number'), // NEW: e.g., '0754123456'
-  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(), 
-  date: text('date').notNull(), 
-  method: text('method').default('Bank Transfer').notNull(), 
-  createdAt: timestamp('created_at').defaultNow().notNull() 
+  productId: integer('product_id').references(() => products.id), // NEW
+  description: text('description').notNull(), 
+  quantity: decimal('quantity', { precision: 10, scale: 2 }).notNull(), 
+  unitPrice: decimal('unit_price', { precision: 15, scale: 2 }).notNull(), 
+  total: decimal('total', { precision: 15, scale: 2 }).notNull() 
 });
 
+export const payments = pgTable('payments', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), invoiceId: integer('invoice_id').references(() => invoices.id).notNull(), bankAccountId: integer('bank_account_id').references(() => bankAccounts.id), provider: text('provider').default('Manual').notNull(), phoneNumber: text('phone_number'), amount: decimal('amount', { precision: 15, scale: 2 }).notNull(), date: text('date').notNull(), method: text('method').default('Bank Transfer').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const suppliers = pgTable('suppliers', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), name: text('name').notNull(), email: text('email'), phone: text('phone'), address: text('address'), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const expenses = pgTable('expenses', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), supplierId: integer('supplier_id').references(() => suppliers.id).notNull(), expenseAccountId: integer('expense_account_id').references(() => accounts.id).notNull(), date: text('date').notNull(), description: text('description').notNull(), amount: decimal('amount', { precision: 15, scale: 2 }).notNull(), status: text('status').default('unpaid').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const expensePayments = pgTable('expense_payments', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), expenseId: integer('expense_id').references(() => expenses.id).notNull(), bankAccountId: integer('bank_account_id').references(() => bankAccounts.id), amount: decimal('amount', { precision: 15, scale: 2 }).notNull(), date: text('date').notNull(), method: text('method').default('Bank Transfer').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
@@ -44,3 +41,4 @@ export const deletedRecords = pgTable('deleted_records', { id: serial('id').prim
 export const bankAccounts = pgTable('bank_accounts', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), name: text('name').notNull(), accountNumber: text('account_number'), type: text('type').notNull(), balance: decimal('balance', { precision: 15, scale: 2 }).default('0.00').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const activityLogs = pgTable('activity_logs', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), userName: text('user_name').notNull(), action: text('action').notNull(), details: text('details').notNull(), isRead: boolean('is_read').default(false).notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
 export const budgets = pgTable('budgets', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), accountId: integer('account_id').references(() => accounts.id).notNull(), month: integer('month').notNull(), year: integer('year').notNull(), allocatedAmount: decimal('allocated_amount', { precision: 15, scale: 2 }).notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });
+export const products = pgTable('products', { id: serial('id').primaryKey(), tenantId: integer('tenant_id').references(() => users.id).notNull(), code: text('code').notNull(), name: text('name').notNull(), description: text('description'), costPrice: decimal('cost_price', { precision: 15, scale: 2 }).notNull(), sellingPrice: decimal('selling_price', { precision: 15, scale: 2 }).notNull(), stockQuantity: decimal('stock_quantity', { precision: 10, scale: 2 }).default('0.00').notNull(), createdAt: timestamp('created_at').defaultNow().notNull() });

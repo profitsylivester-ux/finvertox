@@ -6,7 +6,7 @@ import Link from "next/link";
 import { 
   LayoutDashboard, Briefcase, Book, Landmark, FileText, CheckSquare, Trash, Target,
   Wallet, ShoppingCart, CreditCard, Receipt, Folder, ShieldAlert, Users, History,
-  Bell, ChevronDown, Lock, Building2, Sun, Moon, TrendingDown, Activity, X
+  Bell, ChevronDown, Lock, Building2, Sun, Moon, TrendingDown, Activity, X, Package
 } from "lucide-react";
 import { 
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -230,6 +230,9 @@ export default function DashboardPage() {
 
           <div>
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Sales & Purchases</p>
+            <Link href="/dashboard/inventory" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+              <Package className="w-4 h-4" /> Inventory
+            </Link>
             <Link href="/dashboard/customers" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Users className="w-4 h-4" /> Customers
             </Link>

@@ -8,17 +8,17 @@ export default function InvoicesPage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState("");
 
-  // Form State - Default to empty to prevent hydration mismatch
+  // Form State
   const [customerId, setCustomerId] = useState("");
   const [date, setDate] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [items, setItems] = useState([{ description: "", quantity: "1", unitPrice: "" }]);
+  const [items, setItems] = useState([{ productId: "", description: "", quantity: "1", unitPrice: "" }]);
 
-  // Set dates safely
   useEffect(() => {
     const today = new Date();
     const twoWeeks = new Date(today);
@@ -31,22 +31,40 @@ export default function InvoicesPage() {
   const fetchData = () => {
     Promise.all([
       fetch("/api/invoices").then(res => res.json()),
-      fetch("/api/customers").then(res => res.json())
-    ]).then(([invoicesData, customersData]) => {
+      fetch("/api/customers").then(res => res.json()),
+      fetch("/api/products").then(res => res.json())
+    ]).then(([invoicesData, customersData, productsData]) => {
       setInvoices(invoicesData.invoices || []);
       setCustomers(customersData.customers || []);
+      setProducts(productsData.products || []);
       setIsLoading(false);
     });
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  const addItem = () => setItems([...items, { description: "", quantity: "1", unitPrice: "" }]);
+  const addItem = () => setItems([...items, { productId: "", description: "", quantity: "1", unitPrice: "" }]);
   const removeItem = (index: number) => setItems(items.filter((_, i) => i !== index));
+  
   const updateItem = (index: number, field: string, value: string) => {
     const newItems = [...items];
     // @ts-ignore
     newItems[index][field] = value;
+    setItems(newItems);
+  };
+
+  const handleProductChange = (index: number, productId: string) => {
+    const newItems = [...items];
+    if (productId) {
+      const prod = products.find(p => p.id.toString() === productId);
+      if (prod) {
+        newItems[index].productId = productId;
+        newItems[index].description = prod.name;
+        newItems[index].unitPrice = prod.sellingPrice;
+      }
+    } else {
+      newItems[index].productId = "";
+    }
     setItems(newItems);
   };
 
@@ -69,7 +87,7 @@ export default function InvoicesPage() {
       if (!res.ok) throw new Error(data.error);
 
       setIsCreating(false);
-      setCustomerId(""); setItems([{ description: "", quantity: "1", unitPrice: "" }]);
+      setCustomerId(""); setItems([{ productId: "", description: "", quantity: "1", unitPrice: "" }]);
       fetchData();
     } catch (err: any) {
       setError(err.message);
@@ -126,20 +144,41 @@ export default function InvoicesPage() {
                   <table className="w-full text-left text-sm">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
+                        <th className="px-4 py-3 font-semibold text-slate-600 w-1/4">Product</th>
                         <th className="px-4 py-3 font-semibold text-slate-600">Description</th>
-                        <th className="px-4 py-3 font-semibold text-slate-600 w-24">Qty</th>
-                        <th className="px-4 py-3 font-semibold text-slate-600 w-32">Price</th>
-                        <th className="px-4 py-3 font-semibold text-slate-600 w-32">Total</th>
+                        <th className="px-4 py-3 font-semibold text-slate-600 w-20">Qty</th>
+                        <th className="px-4 py-3 font-semibold text-slate-600 w-28">Price</th>
+                        <th className="px-4 py-3 font-semibold text-slate-600 w-28">Total</th>
                         <th className="px-4 py-3 w-10"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {items.map((item, index) => (
                         <tr key={index}>
-                          <td className="p-2"><input required type="text" value={item.description} onChange={e => updateItem(index, 'description', e.target.value)} placeholder="Item description" className="w-full px-3 py-1.5 border border-slate-300 rounded outline-none" /></td>
-                          <td className="p-2"><input required type="number" min="1" step="1" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded outline-none text-right" /></td>
-                          <td className="p-2"><input required type="number" step="0.01" value={item.unitPrice} onChange={e => updateItem(index, 'unitPrice', e.target.value)} placeholder="0.00" className="w-full px-3 py-1.5 border border-slate-300 rounded outline-none text-right font-mono" /></td>
-                          <td className="p-2 text-right font-mono font-medium">{( (parseFloat(item.quantity)||0) * (parseFloat(item.unitPrice)||0) ).toFixed(2)}</td>
+                          <td className="p-2">
+                            <select 
+                              value={item.productId} 
+                              onChange={e => handleProductChange(index, e.target.value)}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded outline-none text-xs font-medium"
+                            >
+                              <option value="">Custom Item</option>
+                              {products.map(p => (
+                                <option key={p.id} value={p.id}>{p.name} (Stock: {p.stockQuantity})</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="p-2">
+                            <input required type="text" value={item.description} onChange={e => updateItem(index, 'description', e.target.value)} placeholder="Item description" className="w-full px-3 py-1.5 border border-slate-300 rounded outline-none text-sm" />
+                          </td>
+                          <td className="p-2">
+                            <input required type="number" min="1" step="1" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded outline-none text-right text-sm" />
+                          </td>
+                          <td className="p-2">
+                            <input required type="number" step="0.01" value={item.unitPrice} onChange={e => updateItem(index, 'unitPrice', e.target.value)} placeholder="0.00" className="w-full px-3 py-1.5 border border-slate-300 rounded outline-none text-right font-mono text-sm" />
+                          </td>
+                          <td className="p-2 text-right font-mono font-medium text-sm">
+                            {((parseFloat(item.quantity)||0) * (parseFloat(item.unitPrice)||0)).toFixed(2)}
+                          </td>
                           <td className="p-2 text-center">
                             {items.length > 1 && <button type="button" onClick={() => removeItem(index)} className="text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>}
                           </td>
