@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { decrypt } from '@/lib/auth';
 import { db } from '@/db';
@@ -12,7 +12,8 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
-    const [settings] = await db.select().from(companySettings).where(eq(companySettings.tenantId, payload.userId));
+    const tenantId = payload.tenantId || payload.userId;
+    const [settings] = await db.select().from(companySettings).where(eq(companySettings.tenantId, tenantId));
     
     return NextResponse.json({ settings: settings || null });
   } catch (error) {
@@ -27,18 +28,18 @@ export async function PUT(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
     const payload = await decrypt(session);
-    const { tin, vatRate, address, phone, email } = await req.json();
+    const tenantId = payload.tenantId || payload.userId;
+    const { tin, vatRate, address, phone, email, logoUrl, invoicePrefix, termsAndConditions } = await req.json();
 
-    const existing = await db.select().from(companySettings).where(eq(companySettings.tenantId, payload.userId));
+    const existing = await db.select().from(companySettings).where(eq(companySettings.tenantId, tenantId));
 
     if (existing.length > 0) {
       await db.update(companySettings)
-        .set({ tin, vatRate, address, phone, email, updatedAt: new Date() })
-        .where(eq(companySettings.tenantId, payload.userId));
+        .set({ tin, vatRate, address, phone, email, logoUrl, invoicePrefix, termsAndConditions, updatedAt: new Date() })
+        .where(eq(companySettings.tenantId, tenantId));
     } else {
       await db.insert(companySettings).values({
-        tenantId: payload.userId,
-        tin, vatRate, address, phone, email
+        tenantId, tin, vatRate, address, phone, email, logoUrl, invoicePrefix, termsAndConditions
       });
     }
 

@@ -55,9 +55,12 @@ export default function InvoiceViewPage() {
           
           {/* HEADER */}
           <div className="flex justify-between items-start border-b-2 border-slate-900 pb-8 mb-8">
-            <div>
+            <div className="flex flex-col items-start gap-2">
+              {company.logoUrl && (
+                <img src={company.logoUrl} alt="Company Logo" className="max-h-16 max-w-[200px] object-contain mb-2" />
+              )}
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight uppercase">{company.name}</h1>
-              <div className="text-sm text-slate-500 mt-2 space-y-0.5">
+              <div className="text-sm text-slate-500 space-y-0.5">
                 {company.address && <p>{company.address}</p>}
                 {company.email && <p>{company.email}</p>}
                 {company.phone && <p>{company.phone}</p>}
@@ -140,10 +143,18 @@ export default function InvoiceViewPage() {
             </div>
           </div>
 
-          {/* FOOTER */}
-          <div className="border-t border-slate-200 pt-8 text-center text-xs text-slate-400">
-            <p>Thank you for your business.</p>
-            <p className="mt-1">If you have any questions about this invoice, please contact {company.email || company.phone}.</p>
+          {/* FOOTER (TERMS) */}
+          <div className="border-t border-slate-200 pt-8 text-xs text-slate-400">
+            {company.termsAndConditions && (
+              <div className="mb-6">
+                <h4 className="font-bold text-slate-600 uppercase tracking-wider mb-2">Terms & Conditions</h4>
+                <p className="whitespace-pre-wrap leading-relaxed">{company.termsAndConditions}</p>
+              </div>
+            )}
+            <div className="text-center">
+              <p>Thank you for your business.</p>
+              <p className="mt-1">If you have any questions about this invoice, please contact {company.email || company.phone}.</p>
+            </div>
           </div>
 
         </div>

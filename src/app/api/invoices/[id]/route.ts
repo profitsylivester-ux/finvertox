@@ -41,7 +41,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     // 2. Fetch Invoice Items
     const items = await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
 
-    // 3. Fetch Company Settings (for the header)
+    // 3. Fetch Company Settings (for the header and footer)
     const [settings] = await db.select().from(companySettings).where(eq(companySettings.tenantId, tenantId));
     const [company] = await db.select().from(users).where(eq(users.id, tenantId));
 
@@ -54,6 +54,9 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
         phone: settings?.phone || "",
         address: settings?.address || "",
         tin: settings?.tin || "",
+        logoUrl: settings?.logoUrl || null,
+        termsAndConditions: settings?.termsAndConditions || "",
+        invoicePrefix: settings?.invoicePrefix || "INV-",
       }
     });
   } catch (error) {
