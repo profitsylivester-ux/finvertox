@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: finvortex_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: finvortex
+    ports:
+      - "5434:5432"
+    volumes:
+      - finvortex_db_data:/var/lib/postgresql/data
+
+volumes:
+  finvortex_db_data:
