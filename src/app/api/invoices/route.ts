@@ -56,25 +56,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Cannot create invoice in a closed period." }, { status: 400 });
     }
 
-    const subtotal = items.reduce((sum: number, item: any) => sum + (parseFloat(item.quantity) * parseFloat(item.unitPrice)), 0);
+    let subtotal = 0;
+    let totalCOGS = 0;
+
+    // 1. Process Items and Calculate Totals
+    const processedItems = await Promise.all(items.map(async (item: any) => {
+      const lineTotal = parseFloat(item.quantity) * parseFloat(item.unitPrice);
+      subtotal += lineTotal;
+
+      let itemCOGS = 0;
+      if (item.productId) {
+        const [prod] = await db.select().from(products).where(and(eq(products.id, parseInt(item.productId)), eq(products.tenantId, tenantId)));
+        if (prod) {
+          itemCOGS = parseFloat(prod.costPrice) * parseFloat(item.quantity);
+          totalCOGS += itemCOGS;
+        }
+      }
+
+      return {
+        ...item,
+        total: lineTotal,
+        cogs: itemCOGS
+      };
+    }));
+
     const total = subtotal;
 
     const invCount = await db.select({ count: sql`count(*)` }).from(invoices).where(eq(invoices.tenantId, tenantId));
     const invoiceNumber = `INV-${String(Number(invCount[0].count) + 1).padStart(4, '0')}`;
 
+    // 2. Save Invoice
     const [newInvoice] = await db.insert(invoices).values({
       tenantId, customerId, invoiceNumber, date, dueDate, status: 'unpaid', subtotal: subtotal.toString(), total: total.toString()
     }).returning();
 
-    // Save items and deduct stock if product is linked
-    for (const item of items) {
+    // 3. Save Items & Deduct Stock
+    for (const item of processedItems) {
       await db.insert(invoiceItems).values({
         invoiceId: newInvoice.id,
         productId: item.productId ? parseInt(item.productId) : null,
         description: item.description,
         quantity: item.quantity.toString(),
         unitPrice: item.unitPrice.toString(),
-        total: (parseFloat(item.quantity) * parseFloat(item.unitPrice)).toString()
+        total: item.total.toString()
       });
 
       if (item.productId) {
@@ -84,19 +108,32 @@ export async function POST(req: Request) {
       }
     }
 
+    // 4. Post Revenue & COGS to Ledger
     const [arAccount] = await db.select().from(accounts).where(and(eq(accounts.tenantId, tenantId), eq(accounts.code, '1100')));
     const [salesAccount] = await db.select().from(accounts).where(and(eq(accounts.tenantId, tenantId), eq(accounts.code, '4000')));
+    const [cogsAccount] = await db.select().from(accounts).where(and(eq(accounts.tenantId, tenantId), eq(accounts.code, '5000')));
+    const [inventoryAccount] = await db.select().from(accounts).where(and(eq(accounts.tenantId, tenantId), eq(accounts.code, '1200')));
 
     if (arAccount && salesAccount) {
       const [journalEntry] = await db.insert(journalEntries).values({
         tenantId, date, description: `Invoice ${invoiceNumber}`, reference: invoiceNumber, status: 'posted'
       }).returning();
 
+      // Record Revenue
       await db.insert(journalLines).values({ journalId: journalEntry.id, accountId: arAccount.id, type: 'debit', amount: total.toString() });
       await db.update(accounts).set({ balance: sql`${accounts.balance} + ${total}` }).where(eq(accounts.id, arAccount.id));
 
       await db.insert(journalLines).values({ journalId: journalEntry.id, accountId: salesAccount.id, type: 'credit', amount: total.toString() });
       await db.update(accounts).set({ balance: sql`${accounts.balance} + ${total}` }).where(eq(accounts.id, salesAccount.id));
+
+      // Record COGS (if there are any)
+      if (totalCOGS > 0 && cogsAccount && inventoryAccount) {
+        await db.insert(journalLines).values({ journalId: journalEntry.id, accountId: cogsAccount.id, type: 'debit', amount: totalCOGS.toString() });
+        await db.update(accounts).set({ balance: sql`${accounts.balance} + ${totalCOGS}` }).where(eq(accounts.id, cogsAccount.id));
+
+        await db.insert(journalLines).values({ journalId: journalEntry.id, accountId: inventoryAccount.id, type: 'credit', amount: totalCOGS.toString() });
+        await db.update(accounts).set({ balance: sql`${accounts.balance} - ${totalCOGS}` }).where(eq(accounts.id, inventoryAccount.id));
+      }
     }
 
     const [user] = await db.select().from(users).where(eq(users.id, payload.userId));
