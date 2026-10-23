@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -170,6 +170,8 @@ export default function DashboardPage() {
   const currentCurrency = user?.currency || "TZS";
   const currencySymbol = CURRENCIES.find(c => c.code === currentCurrency)?.symbol || "TZS";
   const isCEO = user?.role === "admin";
+  const isFinance = user?.role === "finance";
+  const isAuditor = user?.role === "auditor";
   const roleTitle = isCEO ? "CEO" : user?.role ? user.role.replace('_', ' ').toUpperCase() : "STAFF";
 
   const totalAssets = accounts.filter(a => a.type === 'Asset').reduce((sum, a) => sum + parseFloat(a.balance), 0);
@@ -181,55 +183,68 @@ export default function DashboardPage() {
       
       {/* SIDEBAR */}
       <aside className="w-72 bg-[#0a1128] text-slate-300 flex flex-col shrink-0 border-r border-slate-800/50 h-screen overflow-hidden">
-        <div className="h-20 flex items-center gap-3 px-6 border-b border-slate-800/50 bg-[#0a1128] shrink-0">
-          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg uppercase shadow-lg shadow-blue-600/20">
-            {displayCompany.charAt(0)}
-          </div>
-          <div>
-            <h2 className="font-bold text-white text-sm truncate w-40">{displayCompany}</h2>
-            <p className="text-xs text-slate-400">Finance Workspace</p>
-          </div>
+      <div className="h-20 flex items-center gap-3 px-6 border-b border-slate-800/50 bg-[#0a1128] shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg uppercase shadow-lg shadow-blue-600/20">
+          {displayCompany.charAt(0)}
+        </div>
+        <div>
+          <h2 className="font-bold text-white text-sm truncate w-40">{displayCompany}</h2>
+          <p className="text-xs text-slate-400">Finance Workspace</p>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 scrollbar-hide">
+        <div>
+          <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Overview</p>
+          <Link href="/dashboard" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors mt-1">
+            <LayoutDashboard className="w-4 h-4" /> {isCEO ? "CEO Dashboard" : isFinance ? "Finance Dashboard" : "Auditor Dashboard"}
+          </Link>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 scrollbar-hide">
-          <div>
-            <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Overview</p>
-            <Link href="/dashboard" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors mt-1">
-              <LayoutDashboard className="w-4 h-4" /> {isCEO ? "CEO Dashboard" : "Finance Dashboard"}
-            </Link>
-          </div>
-
-          <div>
-            <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Accounting</p>
+        <div>
+          <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Accounting</p>
+          
+          {isCEO && (
             <Link href="/dashboard/settings/business" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Briefcase className="w-4 h-4" /> Business Setup
             </Link>
-            <Link href="/dashboard/journal" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <Book className="w-4 h-4" /> Journal Entries
-            </Link>
-            <Link href="/dashboard/general-ledger" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <Landmark className="w-4 h-4" /> General Ledger
-            </Link>
-            <Link href="/dashboard/trial-balance" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <FileText className="w-4 h-4" /> Trial Balance
-            </Link>
-            <Link href="/dashboard/reports" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <FileText className="w-4 h-4" /> Financial Reports
-            </Link>
+          )}
+
+          <Link href="/dashboard/journal" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+            <Book className="w-4 h-4" /> Journal Entries
+          </Link>
+          <Link href="/dashboard/general-ledger" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+            <Landmark className="w-4 h-4" /> General Ledger
+          </Link>
+          <Link href="/dashboard/trial-balance" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+            <FileText className="w-4 h-4" /> Trial Balance
+          </Link>
+          <Link href="/dashboard/reports" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+            <FileText className="w-4 h-4" /> Financial Reports
+          </Link>
+          
+          {(isCEO || isFinance) && (
             <Link href="/dashboard/budgets" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <Target className="w-4 h-4" /> Budgets & Commitments
             </Link>
-            <Link href="/dashboard/settings/periods" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <Lock className="w-4 h-4" /> Period Close
-            </Link>
-            <Link href="/dashboard/trash" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <Trash className="w-4 h-4" /> Trash
-            </Link>
-            <Link href="/dashboard/approvals" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <CheckSquare className="w-4 h-4" /> Approvals
-            </Link>
-          </div>
+          )}
 
+          {isCEO && (
+            <>
+              <Link href="/dashboard/settings/periods" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+                <Lock className="w-4 h-4" /> Period Close
+              </Link>
+              <Link href="/dashboard/trash" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+                <Trash className="w-4 h-4" /> Trash
+              </Link>
+              <Link href="/dashboard/approvals" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+                <CheckSquare className="w-4 h-4" /> Approvals
+              </Link>
+            </>
+          )}
+        </div>
+
+        {(isCEO || isFinance) && (
           <div>
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Sales & Purchases</p>
             <Link href="/dashboard/customers" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
@@ -254,7 +269,9 @@ export default function DashboardPage() {
               <CreditCard className="w-4 h-4" /> Bill Payments (Out)
             </Link>
           </div>
+        )}
 
+        {(isCEO || isFinance) && (
           <div>
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Treasury</p>
             <Link href="/dashboard/reconciliation" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
@@ -264,35 +281,44 @@ export default function DashboardPage() {
               <Landmark className="w-4 h-4" /> Cash, Bank & Mobile
             </Link>
           </div>
+        )}
 
+        {(isCEO || isAuditor) && (
           <div className="pb-4">
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-4">Administration</p>
-            <Link href="/dashboard/users" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
-              <Users className="w-4 h-4" /> Users & Roles
-            </Link>
+            
+            {isCEO && (
+              <Link href="/dashboard/users" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+                <Users className="w-4 h-4" /> Users & Roles
+              </Link>
+            )}
+            
             <Link href="/dashboard/audit-trail" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
               <History className="w-4 h-4" /> Audit Trail
             </Link>
           </div>
-        </div>
+        )}
+      </div>
 
-        <div className="p-4 border-t border-slate-800/50 bg-[#0a1128] shrink-0">
-          <div className="mb-3">
-            <p className="text-sm font-bold text-white truncate w-60">{displayName}</p>
-            <p className="text-xs text-slate-400 truncate w-60">{displayEmail}</p>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <span className={`px-2 py-0.5 border rounded-full text-[10px] font-bold ${
-                isCEO ? 'border-blue-500 text-blue-400 bg-blue-500/10' : 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
-              }`}>
-                {roleTitle}
-              </span>
-            </div>
+      <div className="p-4 border-t border-slate-800/50 bg-[#0a1128] shrink-0">
+        <div className="mb-3">
+          <p className="text-sm font-bold text-white truncate w-60">{displayName}</p>
+          <p className="text-xs text-slate-400 truncate w-60">{displayEmail}</p>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <span className={`px-2 py-0.5 border rounded-full text-[10px] font-bold ${
+              isCEO ? 'border-blue-500 text-blue-400 bg-blue-500/10' : 
+              isFinance ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' :
+              'border-amber-500 text-amber-400 bg-amber-500/10'
+            }`}>
+              {roleTitle}
+            </span>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mt-4">
-            Sign out
-          </button>
         </div>
-      </aside>
+        <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mt-4">
+          Sign out
+        </button>
+      </div>
+    </aside>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
@@ -375,9 +401,11 @@ export default function DashboardPage() {
                   </div>
                   
                   <div className="p-3 text-center border-t border-slate-100 dark:border-slate-700">
-                    <Link href="/dashboard/audit-trail" onClick={() => setIsNotificationsOpen(false)} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                      View Full Audit Trail
-                    </Link>
+                    {(isCEO || isAuditor) && (
+              <Link href="/dashboard/audit-trail" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium hover:text-white hover:bg-slate-800/50 rounded-md transition-colors">
+                <History className="w-4 h-4" /> Audit Trail
+              </Link>
+            )}
                   </div>
                 </div>
               )}
@@ -399,7 +427,7 @@ export default function DashboardPage() {
           <div className="max-w-[1400px] mx-auto space-y-6">
             
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{isCEO ? "CEO Dashboard" : "Finance Dashboard"}</h1>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{isCEO ? "CEO Dashboard" : isFinance ? "Finance Dashboard" : "Auditor Dashboard"}</h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Welcome back, {displayName}. Here is your financial overview.</p>
             </div>
 
